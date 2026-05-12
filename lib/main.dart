@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
       ),
 
       // Home Screen
-      home: const ProfileScreen(),
+      home: const TaskListScreen(),
     );
   }
 }
