@@ -2,36 +2,41 @@ import 'package:flutter/material.dart';
 
 import '../models/task.dart';
 import '../widgets/task_card.dart';
+import 'task_details_screen.dart';
 
 class TaskListScreen extends StatefulWidget {
   const TaskListScreen({super.key});
 
   @override
-  State<TaskListScreen> createState() => _TaskListScreenState();
+  State<TaskListScreen> createState() =>
+      _TaskListScreenState();
 }
 
-class _TaskListScreenState extends State<TaskListScreen> {
+class _TaskListScreenState
+    extends State<TaskListScreen> {
 
-  // TEXT CONTROLLERS
   final TextEditingController titleController =
       TextEditingController();
 
   final TextEditingController descriptionController =
       TextEditingController();
 
-  // DROPDOWN VARIABLES
+  final TextEditingController searchController =
+      TextEditingController();
+
+  String currentFilter = "All";
+
   String selectedCategory = "School";
   String selectedPriority = "Low";
 
-  // DATE VARIABLE
   DateTime selectedDate = DateTime.now();
 
-  // SAMPLE TASKS
   List<Task> tasks = [
 
     Task(
       title: "Complete Flutter Assignment",
-      description: "Finish task manager app project",
+      description:
+          "Finish task manager mobile app",
       category: "School",
       priority: "High",
       dueDate: DateTime(2026, 5, 16),
@@ -46,9 +51,10 @@ class _TaskListScreenState extends State<TaskListScreen> {
     ),
 
     Task(
-      title: "Read Software Engineering Notes",
-      description: "Prepare for upcoming test",
-      category: "Study",
+      title: "Read Software Notes",
+      description:
+          "Prepare for upcoming software engineering test",
+      category: "School",
       priority: "Low",
       dueDate: DateTime(2026, 5, 12),
       isCompleted: true,
@@ -58,41 +64,316 @@ class _TaskListScreenState extends State<TaskListScreen> {
   @override
   Widget build(BuildContext context) {
 
+    List<Task> filteredTasks = tasks;
+
+    if (currentFilter == "Pending") {
+
+      filteredTasks = tasks.where((task) {
+
+        return task.isCompleted == false;
+
+      }).toList();
+
+    } else if (currentFilter == "Completed") {
+
+      filteredTasks = tasks.where((task) {
+
+        return task.isCompleted == true;
+
+      }).toList();
+    }
+
+    if (searchController.text.isNotEmpty) {
+
+      filteredTasks =
+          filteredTasks.where((task) {
+
+        return task.title
+            .toLowerCase()
+            .contains(
+              searchController.text.toLowerCase(),
+            );
+
+      }).toList();
+    }
+
+    int totalTasks = tasks.length;
+
+    int completedTasks =
+        tasks.where((task) {
+
+      return task.isCompleted;
+
+    }).length;
+
+    int pendingTasks =
+        totalTasks - completedTasks;
+
+    double progress = totalTasks == 0
+        ? 0
+        : completedTasks / totalTasks;
+
     return Scaffold(
 
       appBar: AppBar(
+
         title: const Text("Task Manager"),
-      ),
 
-      // TASK LIST
-      body: tasks.isEmpty
+        actions: [
 
-          // EMPTY STATE
-          ? const Center(
-              child: Text(
-                "No tasks available",
+          IconButton(
 
-                style: TextStyle(
-                  fontSize: 20,
+            onPressed: () {
+              showSearchDialog();
+            },
+
+            icon: const Icon(Icons.search),
+          ),
+
+          IconButton(
+
+            onPressed: () {
+              showClearAllDialog();
+            },
+
+            icon: const Icon(Icons.delete_sweep),
+          ),
+
+          PopupMenuButton<String>(
+
+            onSelected: (value) {
+
+              setState(() {
+
+                if (value == "Due Date") {
+
+                  tasks.sort((a, b) {
+
+                    return a.dueDate.compareTo(
+                      b.dueDate,
+                    );
+                  });
+
+                } else {
+
+                  tasks.sort((a, b) {
+
+                    Map<String, int>
+                        priorityOrder = {
+
+                      "High": 3,
+                      "Medium": 2,
+                      "Low": 1,
+                    };
+
+                    return priorityOrder[
+                            b.priority]!
+                        .compareTo(
+                      priorityOrder[
+                          a.priority]!,
+                    );
+                  });
+                }
+              });
+            },
+
+            itemBuilder: (context) => [
+
+              const PopupMenuItem(
+                value: "Due Date",
+
+                child: Text(
+                  "Sort by Due Date",
                 ),
               ),
-            )
 
-          // DISPLAY TASKS
-          : ListView.builder(
+              const PopupMenuItem(
+                value: "Priority",
 
-              itemCount: tasks.length,
+                child: Text(
+                  "Sort by Priority",
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
 
-              itemBuilder: (context, index) {
+      body: Column(
+        children: [
 
-                return TaskCard(
-                  task: tasks[index],
-                );
-              },
+          Padding(
+            padding: const EdgeInsets.all(16),
+
+            child: Card(
+
+              elevation: 4,
+
+              shape:
+                  RoundedRectangleBorder(
+                borderRadius:
+                    BorderRadius.circular(
+                  16,
+                ),
+              ),
+
+              child: Padding(
+                padding:
+                    const EdgeInsets.all(16),
+
+                child: Column(
+                  children: [
+
+                    Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment
+                              .spaceAround,
+
+                      children: [
+
+                        buildStatItem(
+                          "Total",
+                          totalTasks
+                              .toString(),
+                        ),
+
+                        buildStatItem(
+                          "Completed",
+                          completedTasks
+                              .toString(),
+                        ),
+
+                        buildStatItem(
+                          "Pending",
+                          pendingTasks
+                              .toString(),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(
+                        height: 20),
+
+                    LinearProgressIndicator(
+                      value: progress,
+
+                      minHeight: 10,
+
+                      borderRadius:
+                          BorderRadius
+                              .circular(
+                        10,
+                      ),
+
+                      backgroundColor:
+                          Colors.grey[
+                              300],
+
+                      valueColor:
+                          const AlwaysStoppedAnimation(
+                        Color(
+                          0xFF8C13AA,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(
+                        height: 10),
+
+                    Text(
+                      "${(progress * 100).toInt()}% Completed",
+                    ),
+                  ],
+                ),
+              ),
             ),
+          ),
 
-      // FLOATING ACTION BUTTON
-      floatingActionButton: FloatingActionButton(
+          Row(
+            mainAxisAlignment:
+                MainAxisAlignment
+                    .spaceEvenly,
+
+            children: [
+
+              buildFilterButton("All"),
+
+              buildFilterButton(
+                  "Pending"),
+
+              buildFilterButton(
+                  "Completed"),
+            ],
+          ),
+
+          const SizedBox(height: 10),
+
+          Expanded(
+
+            child:
+                filteredTasks.isEmpty
+
+                    ? const Center(
+                        child: Text(
+                          "No tasks found",
+
+                          style: TextStyle(
+                            fontSize: 20,
+                          ),
+                        ),
+                      )
+
+                    : ListView.builder(
+
+                        itemCount:
+                            filteredTasks
+                                .length,
+
+                        itemBuilder:
+                            (context,
+                                index) {
+
+                          return GestureDetector(
+
+                            onTap: () {
+
+                              Navigator.push(
+
+                                context,
+
+                                MaterialPageRoute(
+
+                                  builder:
+                                      (context) =>
+                                          TaskDetailScreen(
+                                    task:
+                                        filteredTasks[
+                                            index],
+                                  ),
+                                ),
+                              ).then((_) {
+
+                                setState(() {});
+                              });
+                            },
+
+                            child: TaskCard(
+                              task:
+                                  filteredTasks[
+                                      index],
+                            ),
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
+
+      floatingActionButton:
+          FloatingActionButton(
+
+        backgroundColor:
+            const Color(0xFF8C13AA),
 
         onPressed: () {
           showAddTaskBottomSheet();
@@ -103,7 +384,178 @@ class _TaskListScreenState extends State<TaskListScreen> {
     );
   }
 
-  // BOTTOM SHEET METHOD
+  Widget buildFilterButton(
+      String filterName) {
+
+    bool isSelected =
+        currentFilter == filterName;
+
+    return ElevatedButton(
+
+      style:
+          ElevatedButton.styleFrom(
+
+        backgroundColor: isSelected
+            ? const Color(0xFF8C13AA)
+            : Colors.grey[300],
+
+        foregroundColor: isSelected
+            ? Colors.white
+            : Colors.black,
+      ),
+
+      onPressed: () {
+
+        setState(() {
+
+          currentFilter = filterName;
+        });
+      },
+
+      child: Text(filterName),
+    );
+  }
+
+  Widget buildStatItem(
+    String title,
+    String value,
+  ) {
+
+    return Column(
+      children: [
+
+        Text(
+          value,
+
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight:
+                FontWeight.bold,
+            color: Color(0xFF8C13AA),
+          ),
+        ),
+
+        const SizedBox(height: 5),
+
+        Text(
+          title,
+
+          style: const TextStyle(
+            fontSize: 14,
+            color: Colors.black54,
+          ),
+        ),
+      ],
+    );
+  }
+
+  void showSearchDialog() {
+
+    showDialog(
+      context: context,
+
+      builder: (context) {
+
+        return AlertDialog(
+
+          title:
+              const Text("Search Tasks"),
+
+          content: TextField(
+
+            controller: searchController,
+
+            decoration:
+                const InputDecoration(
+              hintText:
+                  "Enter task title",
+            ),
+
+            onChanged: (value) {
+
+              setState(() {});
+            },
+          ),
+
+          actions: [
+
+            TextButton(
+
+              onPressed: () {
+
+                searchController
+                    .clear();
+
+                setState(() {});
+
+                Navigator.pop(context);
+              },
+
+              child:
+                  const Text("Close"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void showClearAllDialog() {
+
+    showDialog(
+      context: context,
+
+      builder: (context) {
+
+        return AlertDialog(
+
+          title:
+              const Text("Clear All Tasks"),
+
+          content: const Text(
+            "Are you sure you want to delete all tasks?",
+          ),
+
+          actions: [
+
+            TextButton(
+
+              onPressed: () {
+
+                Navigator.pop(context);
+              },
+
+              child:
+                  const Text("Cancel"),
+            ),
+
+            ElevatedButton(
+
+              style:
+                  ElevatedButton.styleFrom(
+                backgroundColor:
+                    Colors.red,
+              ),
+
+              onPressed: () {
+
+                setState(() {
+
+                  tasks.clear();
+                });
+
+                Navigator.pop(context);
+              },
+
+              child:
+                  const Text("Delete"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void showAddTaskBottomSheet() {
 
     showModalBottomSheet(
@@ -120,13 +572,18 @@ class _TaskListScreenState extends State<TaskListScreen> {
             top: 20,
 
             bottom:
-                MediaQuery.of(context).viewInsets.bottom + 20,
+                MediaQuery.of(context)
+                        .viewInsets
+                        .bottom +
+                    20,
           ),
 
-          child: SingleChildScrollView(
+          child:
+              SingleChildScrollView(
 
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize:
+                  MainAxisSize.min,
 
               children: [
 
@@ -135,38 +592,50 @@ class _TaskListScreenState extends State<TaskListScreen> {
 
                   style: TextStyle(
                     fontSize: 22,
-                    fontWeight: FontWeight.bold,
+                    fontWeight:
+                        FontWeight.bold,
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(
+                    height: 20),
 
-                // TITLE FIELD
                 TextField(
-                  controller: titleController,
+                  controller:
+                      titleController,
 
-                  decoration: const InputDecoration(
-                    labelText: "Task Title",
-                    border: OutlineInputBorder(),
+                  decoration:
+                      const InputDecoration(
+                    labelText:
+                        "Task Title",
+
+                    border:
+                        OutlineInputBorder(),
                   ),
                 ),
 
-                const SizedBox(height: 15),
+                const SizedBox(
+                    height: 15),
 
-                // DESCRIPTION FIELD
                 TextField(
-                  controller: descriptionController,
+                  controller:
+                      descriptionController,
+
                   maxLines: 3,
 
-                  decoration: const InputDecoration(
-                    labelText: "Description",
-                    border: OutlineInputBorder(),
+                  decoration:
+                      const InputDecoration(
+                    labelText:
+                        "Description",
+
+                    border:
+                        OutlineInputBorder(),
                   ),
                 ),
 
-                const SizedBox(height: 15),
+                const SizedBox(
+                    height: 15),
 
-                // CATEGORY DROPDOWN
                 DropdownButtonFormField(
 
                   value: selectedCategory,
@@ -192,19 +661,24 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   onChanged: (value) {
 
                     setState(() {
-                      selectedCategory = value!;
+                      selectedCategory =
+                          value!;
                     });
                   },
 
-                  decoration: const InputDecoration(
-                    labelText: "Category",
-                    border: OutlineInputBorder(),
+                  decoration:
+                      const InputDecoration(
+                    labelText:
+                        "Category",
+
+                    border:
+                        OutlineInputBorder(),
                   ),
                 ),
 
-                const SizedBox(height: 15),
+                const SizedBox(
+                    height: 15),
 
-                // PRIORITY DROPDOWN
                 DropdownButtonFormField(
 
                   value: selectedPriority,
@@ -230,19 +704,24 @@ class _TaskListScreenState extends State<TaskListScreen> {
                   onChanged: (value) {
 
                     setState(() {
-                      selectedPriority = value!;
+                      selectedPriority =
+                          value!;
                     });
                   },
 
-                  decoration: const InputDecoration(
-                    labelText: "Priority",
-                    border: OutlineInputBorder(),
+                  decoration:
+                      const InputDecoration(
+                    labelText:
+                        "Priority",
+
+                    border:
+                        OutlineInputBorder(),
                   ),
                 ),
 
-                const SizedBox(height: 15),
+                const SizedBox(
+                    height: 15),
 
-                // DATE PICKER BUTTON
                 ElevatedButton.icon(
 
                   onPressed: () async {
@@ -252,43 +731,54 @@ class _TaskListScreenState extends State<TaskListScreen> {
 
                       context: context,
 
-                      firstDate: DateTime.now(),
+                      firstDate:
+                          DateTime.now(),
 
-                      lastDate: DateTime(2030),
+                      lastDate:
+                          DateTime(2030),
 
-                      initialDate: selectedDate,
+                      initialDate:
+                          selectedDate,
                     );
 
-                    if (pickedDate != null) {
+                    if (pickedDate !=
+                        null) {
 
                       setState(() {
-                        selectedDate = pickedDate;
+
+                        selectedDate =
+                            pickedDate;
                       });
                     }
                   },
 
-                  icon: const Icon(Icons.calendar_month),
+                  icon: const Icon(
+                    Icons.calendar_month,
+                  ),
 
                   label: Text(
                     "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}",
                   ),
                 ),
 
-                const SizedBox(height: 25),
+                const SizedBox(
+                    height: 25),
 
-                // ADD TASK BUTTON
                 SizedBox(
                   width: double.infinity,
 
                   child: ElevatedButton(
 
                     onPressed: () {
+                      if (titleController
+                              .text
+                              .isEmpty ||
+                          descriptionController
+                              .text
+                              .isEmpty) {
 
-                      // VALIDATION
-                      if (titleController.text.isEmpty ||
-                          descriptionController.text.isEmpty) {
-
-                        ScaffoldMessenger.of(context)
+                        ScaffoldMessenger.of(
+                                context)
                             .showSnackBar(
 
                           const SnackBar(
@@ -301,38 +791,46 @@ class _TaskListScreenState extends State<TaskListScreen> {
                         return;
                       }
 
-                      // ADD TASK
                       setState(() {
 
                         tasks.add(
                           Task(
-                            title: titleController.text,
+                            title:
+                                titleController
+                                    .text,
 
                             description:
-                                descriptionController.text,
+                                descriptionController
+                                    .text,
 
-                            category: selectedCategory,
+                            category:
+                                selectedCategory,
 
-                            priority: selectedPriority,
+                            priority:
+                                selectedPriority,
 
-                            dueDate: selectedDate,
+                            dueDate:
+                                selectedDate,
                           ),
                         );
                       });
-
-                      // CLEAR FIELDS
+                      
                       titleController.clear();
-                      descriptionController.clear();
 
-                      // CLOSE BOTTOM SHEET
-                      Navigator.pop(context);
+                      descriptionController
+                          .clear();
+
+                      Navigator.pop(
+                          context);
                     },
 
-                    child: const Text("Add Task"),
+                    child:
+                        const Text("Add Task"),
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(
+                    height: 20),
               ],
             ),
           ),

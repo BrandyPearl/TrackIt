@@ -1,22 +1,40 @@
 import 'package:flutter/material.dart';
-import 'package:trackit/screens/profile_screen.dart';
+
+import 'screens/profile_screen.dart';
 import 'screens/task_list_screen.dart';
 
 void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+
+  int currentIndex = 1;
+
+  final List<Widget> screens = [
+
+    const TaskListScreen(),
+    const ProfileScreen(),
+  ];
+
+  @override
   Widget build(BuildContext context) {
+
     return MaterialApp(
+
       debugShowCheckedModeBanner: false,
 
-      title: 'Task Manager',
+      title: "Task Manager",
 
       theme: ThemeData(
+
         scaffoldBackgroundColor: Colors.white,
 
         colorScheme: const ColorScheme.light(
@@ -31,8 +49,41 @@ class MyApp extends StatelessWidget {
         ),
       ),
 
-      // Home Screen
-      home: const TaskListScreen(),
+      home: Scaffold(
+
+        body: IndexedStack(
+          index: currentIndex,
+          children: screens,
+        ),
+
+        bottomNavigationBar: BottomNavigationBar(
+
+          currentIndex: currentIndex,
+
+          selectedItemColor:
+              const Color(0xFF8C13AA),
+
+          onTap: (index) {
+
+            setState(() {
+              currentIndex = index;
+            });
+          },
+
+          items: const [
+
+            BottomNavigationBarItem(
+              icon: Icon(Icons.task),
+              label: "Tasks",
+            ),
+
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person),
+              label: "Profile",
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
